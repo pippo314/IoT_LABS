@@ -21,12 +21,27 @@ int is_present = 0;
 
 const String topic = "/tiot/23/sw3";
 
-const String catalog_Address = "http://0.0.0.0:8080/";
+const String catalog_Address = "http://192.168.1.52:8080/devices/add";
 
 //const int capacity = JSON_OBJECT_SIZE(2)+JSON_ARRAY_SIZE(1)+JSON_OBJECT_SIZE(4)+40;
 //const int capacity = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3);
 //const int catalog_capacity = JSON_ARRAY_SIZE(1)+JSON_OBJECT_SIZE(3);
-const int capacity = JSON_OBJECT_SIZE(4) + JSON_ARRAY_SIZE(1) + JSON_OBJECT_SIZE(7);
+//const int capacity = JSON_OBJECT_SIZE(4) + JSON_ARRAY_SIZE(1) + JSON_OBJECT_SIZE(7);
+const int capacity = 60;
+
+void Update(){ 
+  Process p; 
+  p.begin("opkg"); 
+  p.addParameter("update"); 
+  p.run(); p.flush(); 
+} 
+void Pack(){ 
+  Process p; 
+  p.begin("opkg"); 
+  p.addParameter("install mosquitto-client libmosquitto"); 
+  p.run(); 
+  p.flush(); 
+} 
 
 /*
  * 
@@ -51,6 +66,7 @@ DynamicJsonDocument doc(capacity);
 
 
 void setup(){
+  pinMode(LED_PIN, OUTPUT);
   Serial.begin(9600);
   while(!Serial);
   Serial.println("Starting...");
@@ -58,10 +74,12 @@ void setup(){
   digitalWrite(LED_PIN, HIGH);
   Bridge.begin();
   digitalWrite(LED_PIN, LOW);
+//  Update();
+//  Pack();
 
   mm = millis();
 
-  Serial.println(capacity);
+//  Serial.println(capacity);
   int n = registerOnCatalog();
   Serial.println(n);
   mqtt.begin("test.mosquitto.org", 1883);
@@ -159,6 +177,7 @@ String senMlEncode(String res, float v, String unit){
 void sendValues(String s, int n, String c){
 
   String message = senMlEncode(s, n, c);
+  Serial.println(mqtt.publish(topic, message));
   mqtt.publish(topic, message);
 //  message = senMlEncode("t", temp, "Cel");
 //  message = senMlEncode("n", sound_event, "null");
@@ -171,16 +190,16 @@ void sendValues(String s, int n, String c){
 
 int registerOnCatalog(){
   Serial.println("Registering...");
-  int len = 2;
-  String end_points[len] = { "/tiot/23/sw3", "altro_topic" };
-  String json = catalogEncode("Yun", "sensori", end_points, len);
-  Serial.println(json);
+//  int len = 2;
+//  String end_points[len] = { "/tiot/23/sw3", "altro_topic" };
+//  String json = catalogEncode("Yun", "sensori", end_points, len);
+//  Serial.println(json);
 //  runFree();
-  delay(10000);
-  return putRequest(json);
+  delay(5000);
+  return putRequest();
 }
 
-String catalogEncode(String deviceId, String resources, String *end_points, int len){
+/*String catalogEncode(String deviceId, String resources, String *end_points, int len){
   Serial.println("encode");
   doc.clear(); //libera memoria utilizzata da doc
   doc["deviceId"] = deviceId;
@@ -195,20 +214,20 @@ String catalogEncode(String deviceId, String resources, String *end_points, int 
   serializeJson(doc, output);
 //  runFree();
   return output;
-}
+}*/
 
-int putRequest(String data){
-  Serial.println("Sending request.");
-  Serial.print(data);
+int putRequest(){
+  Serial.println(F("Sending request."));
+//  Serial.print(data);
   Process p;
 //  p.runShellCommand(F("curl -H Content-Type: application/json -X -POST -d Ciao http://192.168.1.52:8080/devices/add"));
   p.begin("curl");
-  p.addParameter("-H");
-  p.addParameter("Content-Type: application/json");
-  p.addParameter("-X");
-  p.addParameter("POST");
-  p.addParameter("-d");
-  p.addParameter(data);
+  p.addParameter(F("-H"));
+  p.addParameter(F("Content-Type: application/json"));
+  p.addParameter(F("-X"));
+  p.addParameter(F("PUT"));
+  p.addParameter(F("-d"));
+  p.addParameter(F("{\"deviceId\":\"Yun\", \"resources\":\"sensori\", \"end_points\":\"/tiot/23/sw3\"}"));
   p.addParameter(catalog_Address);
   p.run();
   while (p.running());
@@ -220,7 +239,7 @@ int putRequest(String data){
   Serial.flush();
   Serial.println("\nSent.");
   int ret = p.exitValue();
-  p.flush();
+//  p.flush();
   p.close();
   return ret;
 }

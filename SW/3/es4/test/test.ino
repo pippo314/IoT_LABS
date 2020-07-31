@@ -27,13 +27,15 @@ void setup(){
   Bridge.begin();
   digitalWrite(LED_PIN, LOW);
 
-
-  Serial.println(capacity);
-  int n = registerOnCatalog();
-  Serial.println(n);
+  mqtt.begin("test.mosquitto.org", 1883);
 }
 
-void loop(){}
+void loop(){
+  String msg = "Ciao.";
+  mqtt.publish(topic, msg);
+  Serial.println("Sent.");
+  delay(5000);
+  }
 
 int registerOnCatalog(){
   Serial.println("Registering...");
