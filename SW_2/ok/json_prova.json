@@ -1,0 +1,61 @@
+//DEVICES!!!
+{
+	"Devices": "ID01",
+	"risorse": ["bene", "ciao"],
+	"end_points": ["mqtt", "rest"]
+}
+{
+	"Devices": "ID02",
+	"risorse": ["bene", "ciao"],
+	"end_points": ["mqtt", "rest"]
+}
+{
+	"Devices": "ID03",
+	"risorse": ["bene", "ciao"],
+	"end_points": ["mqtt", "rest"]
+}
+{
+	"Devices": "ID04",
+	"risorse": ["bene", "ciao"],
+	"end_points": ["mqtt", "rest"]
+}
+
+
+//USERS!!!
+{
+	"Users": "Uid01",
+	"nome":"Pippo",
+	"cognome": "Baudo",
+	"email": "pippobaudo@gmail.com"
+}
+{
+	"Users": "Uid02",
+	"nome" : "Gerry",
+	"cognome" : "Scotti",
+	"email" : "gerryscotti@gmail.com"
+}
+{
+	"Users": "Uid03",
+	"nome":"Le",
+	"cognome" : "veline",
+	"email": "leveline@gmail.com"
+}
+
+
+//SERVICES
+{
+	"Servizi": "ID01",
+	"descrizione": "bella",
+	"end_points": ["mqtt", "rest"]
+}
+{
+	"Servizi": "ID02",
+	"descrizione": "ciao",
+	"end_points": ["mqtt", "rest"]
+}
+{
+	"Servizi": "ID03",
+	"descrizione": "bellaciao",
+	"end_points": ["mqtt", "rest"]
+}
+

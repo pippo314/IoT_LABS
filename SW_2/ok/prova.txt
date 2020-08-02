@@ -1,0 +1,1 @@
+{"List": [{"deviceId": "D1", "resources": ["nothing", "none"], "end_points": ["nulla", "niente"]}, {"deviceId": "D2", "resources": ["nothing", "none"], "end_points": ["nulla", "niente"]}, {"deviceId": "D3", "resources": ["nothing", "none"], "end_points": ["nulla", "niente"]}]}
