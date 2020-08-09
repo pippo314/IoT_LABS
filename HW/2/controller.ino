@@ -39,7 +39,7 @@ int led_max = 20;
 
 //lampadina smart
 unsigned long int c;
-int light_time = 500; //periodo campionamento sensore di suono
+int light_time = 500; //periodo campionamento del sensore di suono
 int value = LOW; //stato lampadina
 
 
