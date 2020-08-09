@@ -84,7 +84,7 @@ DynamicJsonDocument doc_rcv(JSON_OBJECT_SIZE(8));
 
 void setup() {
   Serial.begin(9600);
-  while(!Serial);
+//  while(!Serial);
   Serial.println("Starting...");
 
 

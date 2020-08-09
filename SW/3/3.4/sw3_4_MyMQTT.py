@@ -119,11 +119,3 @@ class MyMQTT:
 
 #		{ "end_points": {"sub": ["topic"], "pub": ["altri topic"]}}
 
-
-if __name__ == "__main__":
-	client = MyMQTT("client_test", "test.mosquitto.org", 1883)
-	client.start()
-#	client.mySubscribe("/test_topic")
-	while True:
-		pass
-	client.stop()
