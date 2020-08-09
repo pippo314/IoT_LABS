@@ -35,21 +35,18 @@ def ledOff(address):
 
 def presence(address):
   #http://localhost:8080/controller/?Command=example
-  body["Command"] = "PRESENCE"
   r = requests.get(address + "/?Command=PRESENCE")
   s = r.content.decode('utf-8')
   print(f"Il contenuto è:{s}")
   resetDict(body)
 
 def noise(address):
-  body["Command"] = "NOISE"
   r = requests.get(address + "/?Command=NOISE")
   s = r.content.decode('utf-8')
   print(f"Il contenuto è:{s}")
   resetDict(body)
 
 def temp(address):
-  body["Command"] = "TEMP"
   r = requests.get(address + "/?Command=TEMP")
   s = r.content.decode('utf-8')
   print(f"Il contenuto è:{s}")
@@ -83,11 +80,11 @@ def implementationMenu(address):
       ledOff(address)
     elif (command == "PRESENCE"):#GET
       presence(address)
-    elif (command == "NOISE"):#PUT
+    elif (command == "NOISE"):#GET
       noise(address)
     elif (command == "TEMP"):#GET
       temp(address)
-    elif (command == "PRINT_LCD"):#GET
+    elif (command == "PRINT_LCD"):#PUT
       printLCD(address)
     elif (command == "CHANGE_SETPOINTS"):#PUT
       changeSetpoints(address)

@@ -1,8 +1,8 @@
 import cherrypy
 import json
 import time
-from sw2_1_Collector import *
-from mymqtt import *
+from sw2_5_Collector import *
+from MQTTSubscriber import *
 
 """ FORMATO JSON:
 	Device: { 
@@ -35,7 +35,21 @@ class Devices:
 
 	def __init__(self):
 		self.devices = Collector()
-		self.sub=mymqtt("Dev","test.mosquitto.org","1883","/Dev")
+		self.sub=MQTTSubscriber("device_register", "test.mosquitto.org", 1883, "/tiot/23/sw3_4/reg", self)
+		self.sub.start()
+
+	def registerFromMQTT(self, json):
+		""" Rappresenta il notifier da passare al client MQTT grazie al quale
+			il json passato da Arduino arriva al server, permettendone la registrazione """
+
+		deviceId = json["deviceId"]
+		if self.devices.contains(deviceId):
+			self.devices.updateItemTimestamp(deviceId)
+		else:
+			resources = json["resources"]
+			end_points = json["end_points"]
+			d = Device(deviceId, end_points, resources)
+			self.devices.add(d)
 
 	def GET(self, *uri, **params):
 		""" list ritorna un json nel formato {"List": []}

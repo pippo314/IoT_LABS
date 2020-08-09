@@ -1,15 +1,15 @@
 import paho.mqtt.client as mqtt
 import time
 import json
-from requests import *
 
 
-class MyMQTTCatalog:
+class MQTTSubscriber:
 
-    def __init__(self, clientID,broker,port, topic):
+    def __init__(self, clientID, broker, port, topic, notifier):
         self.clientID = clientID
         self.topic = topic
         self.broker =broker
+        self.notifier = notifier
         self.port=port
         self.mqtt_client = mqtt.Client(clientID, False)
         self.mqtt_client.on_connect = self.myOnConnect
@@ -29,11 +29,7 @@ class MyMQTTCatalog:
         print("Connected to %s with result code: %d" % (self.broker, rc))
 
     def myOnMessageReceived(self, paho_mqtt, userdata, msg):
-        my_json = msg.payload.decode('utf8').replace("'", '"')
-        # Load the JSON to a Python list & dump it back out as formatted JSON
-        data = json.loads(my_json)
-        requests.put("http://192.168.1.52:8080/Devices/add", json = data)
-
-    def notify(self, topic, msg):
-        print("Topic:'" + msg.topic + "', QoS: '" + str(msg.qos) + "' Message: '" + str(msg.payload) + "'")
-    # risposta del tipo {"Device":"Id", "resources":[], "end_points":[]}
+        data = msg.payload.decode('utf-8')
+        my_json = json.loads(data)
+        self.notifier.registerFromMQTT(my_json)
+        # risposta del tipo {"Device":"Id", "resources":[], "end_points":[]}

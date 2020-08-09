@@ -68,6 +68,7 @@ void loop()
 	float temp_val = readTemp();
 	String output;
 	output = senMlEncode(F("temperature"), temp_val, F("Cell"));
-	postRequest(output);
+  Serial.print("Codice ritorno Process: ");
+	Serial.println(postRequest(output));
   delay(1000);
 }

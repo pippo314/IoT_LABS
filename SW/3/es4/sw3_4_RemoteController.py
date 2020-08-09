@@ -74,16 +74,3 @@ class RemoteController():
 			self.mqtt_client.myPublish(msg)
 		else:
 			raise cherrypy.HTTPError(400, "Bad request, wrong command.")
-
-
-
-""" GET viene usata per ricevere i valori da Arduino: l'utente inserisce il codice per ricevere
-	i valori di temperatura, il comando viene inviato al server tramite una PUT,
-	il server tramite controller fa	una publish ad Arduino che da subscriber riceve il messaggio 
-	e fa una publish con le	informazioni richieste, il controller nel server riceve il messaggio
-	... problema: come fa controller a dare il messaggio al server
-		problema: controller e Arduino sono sincronizzati?
-
-		I messaggi dell'arduino ricevuti dal controller possono essere salvati in una struttura
-		dati e quando l'utente li richiede viene ritornato l'ultimo messaggio ricevuto
-		"""

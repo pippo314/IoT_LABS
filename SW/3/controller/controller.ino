@@ -1,25 +1,10 @@
 #include <LiquidCrystal_PCF8574.h>
 #include <Process.h>
 #include <Bridge.h>
-#include <BridgeServer.h>
-#include <BridgeClient.h>
 #include <ArduinoJson.h>
 #include <MQTTclient.h>
 
-
 LiquidCrystal_PCF8574 lcd(0x27);
-
-const String topic = "/tiot/23/sw3";
-
-const String catalog_Address = "http://192.168.1.52:8080/devices/add";
-
-const int capacity = JSON_OBJECT_SIZE(2)+JSON_ARRAY_SIZE(1)+JSON_OBJECT_SIZE(4)+40;
-//const int capacity = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(3);
-
-DynamicJsonDocument doc_snd(capacity);
-DynamicJsonDocument doc_rcv(capacity);
-
-unsigned long int mm; //per il timer dell'invio valori
 
 const int FAN_PIN = 5;
 const int TEMP_PIN = A0;
@@ -31,7 +16,7 @@ const int LIGHT_PIN = 12; //lampadina smart
 const int B = 4275;
 const long int R0 = 100000;
 
-const int timeout_pir = 10000;
+const int timeout_pir = 1800000; //30 minuti
 const int timeout_sound = 60000; //se l'ultima rilevazione risale a più di 1 minuto fa non c'è nessuno
 const int sound_interval = 500; //campionamento sensore
 const int minutes5 = 300000;
@@ -49,12 +34,12 @@ int led_values[4];
 
 //fan setpoints
 int fan_min = 20;
-int fan_max = 25;
+int fan_max = 30;
 
 
 //led setpoints
-int led_min = 15;
-int led_max = 25;
+int led_min = 10;
+int led_max = 20;
 
 //lampadina smart
 unsigned long int c;
@@ -90,117 +75,52 @@ void readSound(); // rileva persone nella stanza in base al suono
 void event(); // conta rilevazioni di suono e incrementa il contatore corrispondente
 void PIRtimeout(); // cambia setpoints trascorsi timeiut_pir senza rilevare movimento
 
+unsigned long int mm; //invio valori
+
+Process p;
+
+DynamicJsonDocument doc_snd(JSON_OBJECT_SIZE(3)+ JSON_ARRAY_SIZE(1)+ JSON_OBJECT_SIZE(8));
+DynamicJsonDocument doc_rcv(JSON_OBJECT_SIZE(8));
+
 void setup() {
+  Serial.begin(9600);
+  while(!Serial);
+  Serial.println("Starting...");
+
+
+
+  
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(FAN_PIN, OUTPUT);
+  pinMode(PIR_PIN, INPUT);
+  pinMode(SOUND_PIN, INPUT);
+  pinMode(LIGHT_PIN, OUTPUT);
+  
+  digitalWrite(LED_PIN, HIGH);
+  Bridge.begin();
+  digitalWrite(LED_PIN, LOW);
 
   lcd.begin(16, 2);
   lcd.setBacklight(255);
   lcd.home();
   lcd.clear();
 
+  mqtt.begin("test.mosquitto.org", 1883);
+  mqtt.subscribe("/tiot/23/sw3/act", decodeCommand);
 
-
-  Serial.begin(9600);
-  while(!Serial);
-  Serial.println("Starting...");
-  Serial.println("Per aggiornare i valori dei setpoint premere U.");
-
-  digitalWrite(LED_PIN, LOW);
-  Bridge.begin();
-  digitalWrite(LED_PIN, HIGH);
-
-  int n = registerOnCatalog();
-//  mqtt.begin("test.mosquitto.org", 1883);
-//  mqtt.subscribe(topic, decodeCommand());
-
+  registerOnCatalog();
+  
+  
   last=millis();
   ss=millis();
-  mm = millis();
+  mm=millis();
   sound_event=0;
-
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(FAN_PIN, OUTPUT);
-  pinMode(PIR_PIN, INPUT);
-  pinMode(SOUND_PIN, INPUT);
-  pinMode(LIGHT_PIN, OUTPUT);
 
   analogWrite(FAN_PIN, (int) current_speed); //velocità fan parte da 0
   analogWrite(LED_PIN, (int) current_light); //luminosità led parte da 0
 
   attachInterrupt(digitalPinToInterrupt(PIR_PIN), PIRisr, FALLING);
 }
-
-/*{ 
-  "deviceId": "ArduinoYun", 
-  "resources": "temp sens", 
-  "end_points":  ["/test_topic", "altro topic"]
-}*/
-
-/*void sendValues(){
-  String message = senMlEncode("temperature", temp, "Cel");
-  mqtt.publish(topic, message);
-  message = senMlEncode("noise", sound_event, "null");
-  mqtt.publish(topic, message);
-  message = senMlEncode("presence", is_present, "null");
-  
-}*/
-
-
-int registerOnCatalog(){
-  Serial.println("CIao");
-  int len = 2;
-  String end_points[len] = { "/tiot/23/sw3", "altro_topic" };
-  String json = catalogEncode("ArduinoYun", "sensori", end_points, len);
-  Serial.println(json);
-  return putRequest(json);
-}
-
-String catalogEncode(String deviceId, String resources, String *end_points, int len){
-  Serial.println("encode");
-  doc_snd.clear(); //libera memoria utilizzata da doc_snd
-  doc_snd["deviceId"] = deviceId;
-  doc_snd["resources"] = resources;
-  for(int i = 0; i < len; i++){
-    doc_snd["end_points"][i] = end_points[i];
-    Serial.println("nel for");
-  }
-  
-  String output;
-  int x = serializeJson(doc_snd, output);
-  Serial.println(output);
-  Serial.println(x);
-  return output;
-}
-
-/*String senMlEncode(String res, float v, String unit){
-  doc_snd.clear(); //libera memoria utilizzata da doc_snd
-  doc_snd["bn"] = "Yun";
-  doc_snd["e"][0]["u"] = unit;
-  doc_snd["e"][0]["n"] = res;
-  doc_snd["e"][0]["t"] = millis()/1000.0;
-  doc_snd["e"][0]["v"] = v;
-  
-  String output;
-  serializeJson(doc_snd, output);
-  return output;
-} */
-
-
-int putRequest(String data){
-  Process p;
-  p.begin("curl");
-  p.addParameter("-H");
-  p.addParameter("Content-Type: application/json");
-  p.addParameter("-X");
-  p.addParameter("PUT");
-  p.addParameter("-d");
-  p.addParameter(data);
-  p.addParameter(catalog_Address);
-  p.run();
-
-  return p.exitValue();
-}
-
-
 
 void changeSetPoints(){
     if (is_present == 0) {
@@ -223,7 +143,7 @@ void event(){
 }
 
 void readSound(){
-  
+
   if(millis() - sound_event >= timeout_sound){ //60 minuti set is_present
     sound_is_present = 0;
     is_present = pir_is_present | sound_is_present;
@@ -238,51 +158,123 @@ void readSound(){
       n_events_first = 0;
     }
     first_half=!first_half;
-    ss = millis();
   }
 
   if(millis() - camp >= sound_interval){ //campionamento 500ms
       if(digitalRead(SOUND_PIN) == LOW) {
-//      Serial.println(n_sound_events);
       event();
       camp = millis();
     }
   }
-  
+
   if(millis() - s >= sound_interval){ //intervallo da 10 minuti
     n_sound_events = n_events_first + n_events_second;
     if(n_sound_events > 50) {
         sound_event = millis();
         sound_is_present = 1;
-//        Serial.println(n_sound_events);
     }
-//    Serial.println(n_sound_events);
     s = millis();
    } 
 }
 
 void loop() {
-//    mqtt.monitor();
-    temp = readTemp();
-    
-    if( Serial.available() ) {
-      if( Serial.read() == 'U') {
-        insertSetPoints();
-        changeSetPoints();
-      }
-    }
+  mqtt.monitor();
+  
+  temp = readTemp();
 
-    /*if(millis() - mm >= 5000){
-      sendValues();
+  //invio valori al controller remoto
+  if(millis() - mm >= 20000){
+      temp=readTemp();
+      senMlEncode("t", temp, "Cel");
+      senMlEncode("n", sound_event, "null");
+      senMlEncode("p", is_present, "null");
       mm = millis();
-    }*/
-    
+  }
+
+
     setSpeed(temp);
     setLight(temp);
     PIRtimeout();
     readSound();
     printLCD();
     turnLightOn();
+}
+
+void mqttRequest(){
+  Serial.println(F("Sending request."));
+  //F("{"Device\":\"Yun\",\"Resorces\":\"lots\",\"end_points\":\"/tiot/23/sw3/pub\"}")
+  Serial.println(mqtt.publish(F("/tiot/23/sw3_4/reg"), F("{\"deviceId\":\"Yun\",\"resources\":\"lots\",\"end_points\":\"/tiot/23/sw3/pub\"}")));
+  Serial.println("Sent.");
+}
+
+void registerOnCatalog(){
+  Serial.println(F("Registering..."));
+  delay(5000);
+  mqttRequest();
+}
+
+void senMlEncode(String res, int v, String unit){
+  p.flush();
+  doc_snd.clear(); //libera memoria utilizzata da doc_snd
+  doc_snd["bn"] = "Yun";
+  doc_snd["e"][0]["u"] = unit;
+  doc_snd["e"][0]["n"] = res;
+  doc_snd["e"][0]["t"] = (long) millis()/1000.0;
+  doc_snd["e"][0]["v"] = v;
+  
+  String output;
+  serializeJson(doc_snd, output);
+  Serial.println(output);
+  mqtt.publish("/tiot/23/sw3/pub", output);
+}
+
+void decodeCommand(const String& topic, const String& subtopic, const String& message){
+  DeserializationError err = deserializeJson(doc_rcv, message);
+  if(err) {
+    Serial.println(F("deserialize failed with code: "));
+    Serial.println(err.c_str());
+  }
+
+  if(doc_rcv["e"][0]["n"] == "led"){
+    if (doc_rcv["e"][0]["v"] == 0 || doc_rcv["e"][0]["v"] == 1){
+      digitalWrite(7, doc_rcv["e"][0]["v"]); 
+    }
+    else {
+      Serial.println("Value not correct"); 
+    }
+  }
+  else if(doc_rcv["e"][0]["n"] == "fan"){
+    if (doc_rcv["e"][0]["v"] == 1){
+        analogWrite(A0, 255); 
+    }
+    else if (doc_rcv["e"][0]["v"] == 0){
+      analogWrite(A0, 0); 
+      //COSTANTE ELIMINATE E VELOCITA' IMPOSTATA COME "ACCESO O SPENTO"
+    }
+    else {
+        Serial.println("Value not correct"); 
+    }
+  }
+  else if(doc_rcv["e"][0]["n"] == "print"){
+    lcd.home();
+    String str = doc_rcv["e"][0]["s"];
+    lcd.print(str);
+  }
+  else if(doc_rcv["e"][0]["n"] == "setpoints"){
+    setpoints2();
+  }
+}
+
+void setpoints2(){
+  int sl = doc_rcv["e"][0]["sl"]; // ex 12345678
+  int sf = doc_rcv["e"][0]["sf"]; // ex 09877655
+  for (int i = 0; int l = 3; i < 4 && l >= 0, i++, l--) {
+    fan_values[l] = sf % 100;
+    sf = (int) sf/100;
+    led_values[l] = sl % 100;
+    sl = (int) sl/100;
+  }
+  changeSetPoints(); //questa funzione modifica i set points in base alla presenza o meno di una persona
 }
 
 void PIRtimeout(){
@@ -309,10 +301,7 @@ void setSpeed(float temp){
 void setLight(float temp){
     if(temp > led_min && temp < led_max) { //temperatura in range
         current_light = v_max * (1 - (temp / led_max));
-//    Serial.print(current_light);
-//   Serial.print('\n');
     } else if(temp < led_min){
-        Serial.println("min");
         current_light = 255;
     } else {
         current_light = 0;
@@ -334,14 +323,13 @@ float readTemp(){
     return temp;
 }
 
-void insertSetPoints(){
+/*void insertSetPoints(){
   Serial.println("Inserire valori per Riscaldamento (prima valori per presente): ");
   int i=0;
   while(i<4){
     if(Serial.available()>0){
       int inByte = Serial.parseInt();
       fan_values[i]=inByte;
-      
       i++;
     }
   }
@@ -355,7 +343,7 @@ void insertSetPoints(){
       i++;
     }
   }
-}
+}*/
 
 void printLCD(){
   lcd.home();
@@ -393,7 +381,6 @@ void turnLightOn(){
   if(millis() - c >= light_time){
       for(int i=0; i < 4; i++){
           if(digitalRead(SOUND_PIN) == LOW){
-//              Serial.println("rilevato suono");
               delay(400);
               n++;
           }
@@ -404,4 +391,7 @@ void turnLightOn(){
       }
       c = millis();
   }
+	if (!is_present){
+		digitalWrite(LIGHT_PIN,LOW);
+		}
 }
